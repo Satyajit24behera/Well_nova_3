@@ -7,7 +7,7 @@ from typing import Any
 import plotly.graph_objects as go
 import streamlit as st
 
-from modules.utils import severity_tier
+from modules.utils import gemini_available, severity_tier
 
 
 def _risk_score_card(label: str, score: int, tier: str, interpretation: str) -> str:
@@ -79,13 +79,22 @@ def render_risk_dashboard(risk_payload: dict[str, Any]) -> None:
     tiers = risk.get("tiers", {})
     interp = clinical.get("interpretations", {})
     source = risk_payload.get("source", "mock")
+    fallback_reason = clinical.get("_fallback_reason") if isinstance(clinical, dict) else None
 
     if source == "mock":
-        st.info(
-            "ℹ️ Risk analysis generated locally (no Gemini API key set). "
-            "Add `GEMINI_API_KEY` to Streamlit secrets for AI-powered ICD mapping and clinical interpretation.",
-            icon="ℹ️",
-        )
+        if gemini_available() and fallback_reason:
+            st.warning(
+                "Gemini call failed for risk interpretation; falling back to a deterministic "
+                f"local result. Details: {fallback_reason}",
+                icon="⚠️",
+            )
+        elif not gemini_available():
+            st.info(
+                "Risk analysis generated locally (no Gemini API key configured). "
+                "Add `GEMINI_API_KEY` to Streamlit secrets for AI-powered ICD mapping "
+                "and clinical interpretation.",
+                icon="ℹ️",
+            )
 
     st.markdown("## 🩺 Health Risk Dashboard")
 

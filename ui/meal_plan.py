@@ -6,6 +6,7 @@ from typing import Any
 import streamlit as st
 
 from modules.diet_engine import SDP_TARGETS
+from modules.utils import gemini_available
 
 
 _MEAL_ORDER = ["Breakfast", "Morning Snack", "Lunch", "Evening Snack", "Dinner"]
@@ -94,15 +95,23 @@ def _daily_summary(totals: dict[str, Any]) -> None:
 def render_meal_plan(meal_plan: dict[str, Any]) -> None:
     ccr = meal_plan.get("ccr_percentage", 0)
     source = meal_plan.get("_source", "mock")
+    fallback_reason = meal_plan.get("_fallback_reason")
 
     st.markdown("## 🥗 7-Day Personalised Meal Plan")
 
     if source == "mock":
-        st.info(
-            "ℹ️ Meal plan generated locally (no Gemini API key set). "
-            "Add `GEMINI_API_KEY` to Streamlit secrets for a fully personalised AI-generated plan.",
-            icon="ℹ️",
-        )
+        if gemini_available() and fallback_reason:
+            st.warning(
+                "Gemini call failed for the meal plan; falling back to a deterministic "
+                f"local plan. Details: {fallback_reason}",
+                icon="⚠️",
+            )
+        elif not gemini_available():
+            st.info(
+                "Meal plan generated locally (no Gemini API key configured). "
+                "Add `GEMINI_API_KEY` to Streamlit secrets for a fully personalised AI-generated plan.",
+                icon="ℹ️",
+            )
 
     st.markdown(
         f'<div class="compliance-banner">Clinical Compliance Rate (CCR): {ccr:.1f}% ✅</div>',

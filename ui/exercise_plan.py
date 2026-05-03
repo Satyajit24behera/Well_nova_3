@@ -5,6 +5,8 @@ from typing import Any
 
 import streamlit as st
 
+from modules.utils import gemini_available
+
 
 _INTENSITY_CSS = {
     "Low": "intensity-low",
@@ -48,15 +50,23 @@ def _day_card_html(day: dict[str, Any]) -> str:
 def render_exercise_plan(exercise_plan: dict[str, Any]) -> None:
     escr = exercise_plan.get("escr_percentage", 0)
     source = exercise_plan.get("_source", "mock")
+    fallback_reason = exercise_plan.get("_fallback_reason")
 
     st.markdown("## 🏃 7-Day Exercise Schedule")
 
     if source == "mock":
-        st.info(
-            "ℹ️ Exercise plan generated locally (no Gemini API key set). "
-            "Add `GEMINI_API_KEY` to Streamlit secrets for a fully personalised AI-generated schedule.",
-            icon="ℹ️",
-        )
+        if gemini_available() and fallback_reason:
+            st.warning(
+                "Gemini call failed for the exercise schedule; falling back to a deterministic "
+                f"local plan. Details: {fallback_reason}",
+                icon="⚠️",
+            )
+        elif not gemini_available():
+            st.info(
+                "Exercise plan generated locally (no Gemini API key configured). "
+                "Add `GEMINI_API_KEY` to Streamlit secrets for a fully personalised AI-generated schedule.",
+                icon="ℹ️",
+            )
 
     st.markdown(
         f'<div class="compliance-banner">'

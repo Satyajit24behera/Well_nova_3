@@ -157,6 +157,12 @@ def build_patient_state_vector(
 
 
 # ---------- Gemini wrapper ----------
+# Default model. `gemini-1.5-flash` was retired by Google; the current
+# stable, fast, JSON-capable replacement is `gemini-2.5-flash`. Override via
+# the GEMINI_MODEL env var or a `GEMINI_MODEL` Streamlit secret if needed.
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
+
+
 def _get_api_key() -> str | None:
     try:
         key = st.secrets.get("GEMINI_API_KEY")  # type: ignore[attr-defined]
@@ -165,6 +171,14 @@ def _get_api_key() -> str | None:
     if not key:
         key = os.environ.get("GEMINI_API_KEY")
     return key or None
+
+
+def _get_model_name() -> str:
+    try:
+        m = st.secrets.get("GEMINI_MODEL")  # type: ignore[attr-defined]
+    except Exception:
+        m = None
+    return m or os.environ.get("GEMINI_MODEL") or DEFAULT_GEMINI_MODEL
 
 
 def gemini_available() -> bool:
@@ -181,7 +195,7 @@ def call_gemini(system_prompt: str, user_message: str) -> dict[str, Any]:
 
     genai.configure(api_key=key)
     model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash",
+        model_name=_get_model_name(),
         system_instruction=system_prompt,
         generation_config=genai.GenerationConfig(
             temperature=0.3,
